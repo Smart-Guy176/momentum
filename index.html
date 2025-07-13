@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Momentum</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Momentum</h1>
+            <p>Build your streak, one task at a time.</p>
+        </header>
+
+        <div class="add-task-form">
+            <input type="text" id="task-input" placeholder="Add a new target..." />
+            <div class="daily-habit-toggle">
+                <input type="checkbox" id="daily-habit-checkbox" />
+                <label for="daily-habit-checkbox">Make this a Daily Goal</label>
+            </div>
+            <button id="add-task-btn">Add to List</button>
+        </div>
+
+        <main>
+            <section id="daily-habits-section">
+                <h2>Daily Momentum</h2>
+                <ul id="daily-habits-list" class="task-list"></ul>
+            </section>
+            <section id="one-time-tasks-section">
+                <h2>Today's Targets</h2>
+                <ul id="one-time-tasks-list" class="task-list"></ul>
+            </section>
+            <section id="completed-tasks-section">
+                <h2>Completed</h2>
+                <ul id="completed-tasks-list" class="task-list"></ul>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
