@@ -19,16 +19,32 @@
             <p>Build your streak, one task at a time.</p>
         </header>
 
-        <div class="add-task-form">
-            <input type="text" id="task-input" placeholder="Add a new target..." />
-            <div class="daily-habit-toggle">
-                <input type="checkbox" id="daily-habit-checkbox" />
-                <label for="daily-habit-checkbox">Make this a Daily Goal</label>
-            </div>
-            <button id="add-task-btn">Add to List</button>
-        </div>
-
         <main>
+            <!-- CALENDAR SECTION -->
+            <section id="calendar-section">
+                <div id="calendar-header">
+                    <button id="prev-month-btn" aria-label="Previous Month"><</button>
+                    <h2 id="month-display"></h2>
+                    <button id="next-month-btn" aria-label="Next Month">></button>
+                </div>
+                <div id="weekdays">
+                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                </div>
+                <div id="calendar-grid"></div>
+            </section>
+
+            <!-- ADD TASK SECTION -->
+            <div class="add-task-form">
+                <input type="text" id="task-input" placeholder="Add a new target..." />
+                <p id="selected-date-display" class="selected-date-text"></p>
+                <div class="daily-habit-toggle">
+                    <input type="checkbox" id="daily-habit-checkbox" />
+                    <label for="daily-habit-checkbox">Make this a Daily Goal</label>
+                </div>
+                <button id="add-task-btn">Add to List</button>
+            </div>
+
+            <!-- TASK LISTS -->
             <section id="daily-habits-section">
                 <h2>Daily Momentum</h2>
                 <ul id="daily-habits-list" class="task-list"></ul>
@@ -43,6 +59,16 @@
             </section>
         </main>
     </div>
+
+    <!-- DAY DETAIL MODAL -->
+    <div id="day-detail-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <button id="modal-close-btn" class="modal-close" aria-label="Close">×</button>
+            <h3 id="modal-date-header"></h3>
+            <ul id="modal-task-list" class="task-list"></ul>
+        </div>
+    </div>
+
 
     <script src="app.js"></script>
 </body>
