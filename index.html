@@ -3,71 +3,44 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Momentum | Advanced Calendar</title>
+    <title>Momentum</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
-    <div class="app-container">
-        <!-- LEFT PANEL - CALENDAR -->
-        <div class="calendar-panel">
-            <div class="calendar-header">
-                <h1 id="calendar-title">Momentum</h1>
-                <p id="calendar-subtitle">Your Personal Dashboard</p>
-                <div class="calendar-controls">
-                    <button id="prev-month-btn" aria-label="Previous Month">‹</button>
-                    <h2 id="month-display"></h2>
-                    <button id="next-month-btn" aria-label="Next Month">›</button>
-                </div>
+    <div class="container">
+        <header>
+            <h1>Momentum</h1>
+            <p>Build your streak, one task at a time.</p>
+        </header>
+
+        <div class="add-task-form">
+            <input type="text" id="task-input" placeholder="Add a new target..." />
+            <div class="daily-habit-toggle">
+                <input type="checkbox" id="daily-habit-checkbox" />
+                <label for="daily-habit-checkbox">Make this a Daily Goal</label>
             </div>
-            <div id="weekdays">
-                <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
-            </div>
-            <div id="calendar-grid"></div>
+            <button id="add-task-btn">Add to List</button>
         </div>
 
-        <!-- RIGHT PANEL - TASKS -->
-        <main class="tasks-panel">
-            <div class="tasks-panel-inner">
-                <header class="task-header">
-                    <h2 id="selected-date-header">Today</h2>
-                    <button id="clear-selection-btn" class="hidden">View Today</button>
-                </header>
-
-                <div class="add-task-form">
-                    <input type="text" id="task-input" placeholder="Add a new target for Today..." />
-                    <button id="add-task-btn" aria-label="Add Task">+</button>
-                </div>
-                 <div class="daily-habit-toggle">
-                    <input type="checkbox" id="daily-habit-checkbox" />
-                    <label for="daily-habit-checkbox">Make this a Daily Goal</label>
-                </div>
-
-                <section id="one-time-tasks-section">
-                    <h3 class="task-section-title" id="targets-title">Today's Targets</h3>
-                    <ul id="one-time-tasks-list" class="task-list"></ul>
-                </section>
-
-                <section id="upcoming-tasks-section">
-                    <h3 class="task-section-title">Upcoming (Next 7 Days)</h3>
-                    <ul id="upcoming-tasks-list" class="task-list"></ul>
-                </section>
-
-                <section id="daily-habits-section">
-                    <h3 class="task-section-title">Daily Momentum</h3>
-                    <ul id="daily-habits-list" class="task-list"></ul>
-                </section>
-                
-                <section id="completed-tasks-section">
-                    <h3 class="task-section-title">Completed</h3>
-                    <ul id="completed-tasks-list" class="task-list"></ul>
-                </section>
-            </div>
+        <main>
+            <section id="daily-habits-section">
+                <h2>Daily Momentum</h2>
+                <ul id="daily-habits-list" class="task-list"></ul>
+            </section>
+            <section id="one-time-tasks-section">
+                <h2>Today's Targets</h2>
+                <ul id="one-time-tasks-list" class="task-list"></ul>
+            </section>
+            <section id="completed-tasks-section">
+                <h2>Completed</h2>
+                <ul id="completed-tasks-list" class="task-list"></ul>
+            </section>
         </main>
     </div>
 

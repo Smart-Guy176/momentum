@@ -1,253 +1,158 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- STATE MANAGEMENT ---
-    const state = {
-        tasks: JSON.parse(localStorage.getItem('momentumTasksV2')) || [],
-        calendarNav: 0, // Month offset from current month
-        selectedDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-    };
+    // --- Element Selectors ---
+    const taskInput = document.getElementById('task-input');
+    const isDailyHabitCheckbox = document.getElementById('daily-habit-checkbox');
+    const addTaskBtn = document.getElementById('add-task-btn');
+    const dailyHabitsList = document.getElementById('daily-habits-list');
+    const oneTimeTasksList = document.getElementById('one-time-tasks-list');
+    const completedTasksList = document.getElementById('completed-tasks-list');
 
-    // --- ELEMENT SELECTORS ---
-    const elements = {
-        taskInput: document.getElementById('task-input'),
-        isDailyHabitCheckbox: document.getElementById('daily-habit-checkbox'),
-        addTaskBtn: document.getElementById('add-task-btn'),
-        dailyHabitsList: document.getElementById('daily-habits-list'),
-        oneTimeTasksList: document.getElementById('one-time-tasks-list'),
-        upcomingTasksList: document.getElementById('upcoming-tasks-list'),
-        completedTasksList: document.getElementById('completed-tasks-list'),
-        calendarGrid: document.getElementById('calendar-grid'),
-        monthDisplay: document.getElementById('month-display'),
-        prevMonthBtn: document.getElementById('prev-month-btn'),
-        nextMonthBtn: document.getElementById('next-month-btn'),
-        selectedDateHeader: document.getElementById('selected-date-header'),
-        clearSelectionBtn: document.getElementById('clear-selection-btn'),
-        targetsTitle: document.getElementById('targets-title'),
-    };
+    // --- Data Management ---
+    let tasks = JSON.parse(localStorage.getItem('momentumTasks')) || [];
 
-    // --- DATA PERSISTENCE ---
     const saveTasks = () => {
-        localStorage.setItem('momentumTasksV2', JSON.stringify(state.tasks));
+        localStorage.setItem('momentumTasks', JSON.stringify(tasks));
     };
 
-    // --- CALENDAR LOGIC ---
-    const renderCalendar = () => {
-        elements.calendarGrid.style.opacity = '0'; // Start fade out
-
-        setTimeout(() => {
-            const dt = new Date();
-            if (state.calendarNav !== 0) {
-                dt.setMonth(new Date().getMonth() + state.calendarNav, 1);
-            }
-
-            const year = dt.getFullYear();
-            const month = dt.getMonth();
-            
-            elements.monthDisplay.innerText = `${dt.toLocaleDateString('en-us', { month: 'long' })} ${year}`;
-            elements.calendarGrid.innerHTML = '';
-            
-            const firstDayOfMonth = new Date(year, month, 1);
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const paddingDays = firstDayOfMonth.getDay(); // 0 = Sunday
-
-            const tasksByDate = groupTasksByDate();
-
-            for (let i = 1; i <= paddingDays + daysInMonth; i++) {
-                const daySquare = document.createElement('div');
-                daySquare.classList.add('calendar-day');
-                const dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(i - paddingDays).padStart(2, '0')}`;
-
-                if (i > paddingDays) {
-                    daySquare.innerText = i - paddingDays;
-                    
-                    if (i - paddingDays === new Date().getDate() && state.calendarNav === 0) daySquare.classList.add('today');
-                    if (dayString === state.selectedDate) daySquare.classList.add('selected');
-                    if (tasksByDate[dayString]?.some(t => !t.isCompleted)) daySquare.classList.add('has-tasks');
-
-                    daySquare.addEventListener('click', () => {
-                        state.selectedDate = dayString;
-                        renderAll();
-                    });
-                } else {
-                    daySquare.classList.add('other-month');
-                }
-                elements.calendarGrid.appendChild(daySquare);
-            }
-            elements.calendarGrid.style.opacity = '1'; // Fade in
-        }, 300); // Match CSS transition duration
-    };
-
-    // --- TASK LOGIC ---
-    const groupTasksByDate = () => state.tasks.reduce((acc, task) => {
-        const date = task.dueDate.split('T')[0];
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(task);
-        return acc;
-    }, {});
-
+    // --- Core Task Functions ---
     const addTask = () => {
-        const taskName = elements.taskInput.value.trim();
+        const taskName = taskInput.value.trim();
         if (taskName === '') return;
 
-        state.tasks.push({
+        const newTask = {
             id: self.crypto.randomUUID(),
             name: taskName,
-            isDailyHabit: elements.isDailyHabitCheckbox.checked,
+            isDailyHabit: isDailyHabitCheckbox.checked,
             isCompleted: false,
-            dueDate: new Date(state.selectedDate + 'T00:00:00').toISOString(),
+            dueDate: new Date().toISOString(),
             completedAt: null
-        });
+        };
 
+        tasks.push(newTask);
         saveTasks();
-        renderAll();
-        elements.taskInput.value = '';
-        elements.isDailyHabitCheckbox.checked = false;
-        elements.taskInput.focus();
+        renderTasks();
+
+        taskInput.value = '';
+        isDailyHabitCheckbox.checked = false;
+        taskInput.focus();
     };
 
     const deleteTask = (taskId) => {
-        state.tasks = state.tasks.filter(task => task.id !== taskId);
+        tasks = tasks.filter(task => task.id !== taskId);
         saveTasks();
-        renderAll();
+        renderTasks();
     };
 
     const toggleTaskComplete = (taskId) => {
-        const task = state.tasks.find(t => t.id === taskId);
+        const task = tasks.find(t => t.id === taskId);
         if (task) {
             task.isCompleted = !task.isCompleted;
             task.completedAt = task.isCompleted ? new Date().toISOString() : null;
             saveTasks();
-            renderAll();
+            renderTasks();
         }
     };
 
-    // --- UI RENDERING ---
-    const createTaskListItem = (task) => {
-        const li = document.createElement('li');
-        li.className = `task-item ${task.isCompleted ? 'completed' : ''}`;
-        li.dataset.taskId = task.id;
+    const renderTasks = () => {
+        // Clear all lists before rendering
+        dailyHabitsList.innerHTML = '';
+        oneTimeTasksList.innerHTML = '';
+        completedTasksList.innerHTML = '';
 
-        const checkbox = document.createElement('div');
-        checkbox.className = 'checkbox';
-        checkbox.addEventListener('click', () => toggleTaskComplete(task.id));
+        // Sort tasks: uncompleted first, then by due date
+        tasks.sort((a, b) => a.isCompleted - b.isCompleted || new Date(a.dueDate) - new Date(b.dueDate));
 
-        const taskName = document.createElement('span');
-        taskName.className = 'task-name';
-        taskName.textContent = task.name;
+        tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.className = `task-item ${task.isCompleted ? 'completed' : ''}`;
+            li.dataset.taskId = task.id;
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-btn';
-        deleteBtn.innerHTML = '×';
-        deleteBtn.setAttribute('aria-label', 'Delete task');
-        deleteBtn.addEventListener('click', () => deleteTask(task.id));
+            // Checkbox
+            const checkbox = document.createElement('div');
+            checkbox.className = 'checkbox';
+            checkbox.addEventListener('click', () => toggleTaskComplete(task.id));
 
-        li.appendChild(checkbox);
-        li.appendChild(taskName);
-        li.appendChild(deleteBtn);
-        return li;
-    };
+            // Task Name
+            const taskName = document.createElement('span');
+            taskName.className = 'task-name';
+            taskName.textContent = task.name;
 
-    const renderTaskLists = () => {
-        // Clear all lists
-        Object.values(elements).forEach(el => {
-            if (el.classList?.contains('task-list')) el.innerHTML = '';
-        });
+            // Delete Button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.setAttribute('aria-label', 'Delete task');
+            deleteBtn.addEventListener('click', () => deleteTask(task.id));
 
-        const today = new Date();
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
+            li.appendChild(checkbox);
+            li.appendChild(taskName);
+            li.appendChild(deleteBtn);
 
-        const sortedTasks = [...state.tasks].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-        const tasksForSelectedDate = sortedTasks.filter(t => t.dueDate.split('T')[0] === state.selectedDate && !t.isCompleted);
-        
-        tasksForSelectedDate.forEach(task => elements.oneTimeTasksList.appendChild(createTaskListItem(task)));
-
-        sortedTasks.forEach(task => {
-            const taskDate = new Date(task.dueDate);
+            // Append to the correct list
             if (task.isCompleted) {
-                elements.completedTasksList.prepend(createTaskListItem(task));
+                completedTasksList.prepend(li); // Show most recently completed first
             } else if (task.isDailyHabit) {
-                elements.dailyHabitsList.appendChild(createTaskListItem(task));
-            } else if (taskDate > today && taskDate <= nextWeek) {
-                elements.upcomingTasksList.appendChild(createTaskListItem(task));
+                dailyHabitsList.appendChild(li);
+            } else {
+                oneTimeTasksList.appendChild(li);
             }
         });
     };
 
-    const updateUIForSelectedDate = () => {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const date = new Date(state.selectedDate + 'T00:00:00');
-        
-        if (state.selectedDate === todayStr) {
-            elements.selectedDateHeader.innerText = "Today";
-            elements.targetsTitle.innerText = "Today's Targets";
-            elements.taskInput.placeholder = "Add a new target for Today...";
-            elements.clearSelectionBtn.classList.add('hidden');
-        } else {
-            const dayName = date.toLocaleDateString('en-us', { weekday: 'long' });
-            const dateString = date.toLocaleDateString('en-us', { month: 'long', day: 'numeric' });
-            elements.selectedDateHeader.innerText = `${dayName}, ${dateString}`;
-            elements.targetsTitle.innerText = `Targets for ${dateString}`;
-            elements.taskInput.placeholder = `Add a new target for ${dateString}...`;
-            elements.clearSelectionBtn.classList.remove('hidden');
-        }
-    };
-    
     const stackDailyHabits = () => {
         const todayStr = new Date().toDateString();
-        const lastStackedDate = localStorage.getItem('momentumLastStackedV2');
+        const lastStackedDate = localStorage.getItem('momentumLastStacked');
 
         if (lastStackedDate !== todayStr) {
-            const uniqueHabitNames = [...new Set(state.tasks.filter(t => t.isDailyHabit).map(t => t.name))];
+            const uniqueHabitNames = [...new Set(tasks.filter(t => t.isDailyHabit).map(t => t.name))];
+
             uniqueHabitNames.forEach(habitName => {
-                state.tasks.push({
-                    id: self.crypto.randomUUID(),
-                    name: habitName,
-                    isDailyHabit: true,
-                    isCompleted: false,
-                    dueDate: new Date().toISOString(),
-                    completedAt: null
-                });
+                const hasTaskForToday = tasks.some(t =>
+                    t.name === habitName && t.isDailyHabit && new Date(t.dueDate).toDateString() === todayStr
+                );
+
+                if (!hasTaskForToday) {
+                    tasks.push({
+                        id: self.crypto.randomUUID(),
+                        name: habitName,
+                        isDailyHabit: true,
+                        isCompleted: false,
+                        dueDate: new Date().toISOString(),
+                        completedAt: null
+                    });
+                }
             });
-            localStorage.setItem('momentumLastStackedV2', todayStr);
+
+            localStorage.setItem('momentumLastStacked', todayStr);
             saveTasks();
         }
     };
 
-    const renderAll = () => {
-        renderCalendar();
-        renderTaskLists();
-        updateUIForSelectedDate();
+    // --- Event Listeners ---
+    addTaskBtn.addEventListener('click', addTask);
+    taskInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            addTask();
+        }
+    });
+
+    // --- PWA & Notification Logic ---
+    const registerServiceWorker = async () => {
+        if ('serviceWorker' in navigator) {
+            try {
+                await navigator.serviceWorker.register('sw.js');
+                console.log('Service Worker registered successfully.');
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+            }
+        }
     };
 
-    // --- EVENT LISTENERS ---
-    const initEventListeners = () => {
-        elements.addTaskBtn.addEventListener('click', addTask);
-        elements.taskInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addTask();
-        });
-
-        elements.prevMonthBtn.addEventListener('click', () => {
-            state.calendarNav--;
-            renderCalendar();
-        });
-
-        elements.nextMonthBtn.addEventListener('click', () => {
-            state.calendarNav++;
-            renderCalendar();
-        });
-        
-        elements.clearSelectionBtn.addEventListener('click', () => {
-            state.selectedDate = new Date().toISOString().split('T')[0];
-            renderAll();
-        });
-    };
-
-    // --- INITIALIZATION ---
+    // --- Initial Load ---
     const initializeApp = () => {
         stackDailyHabits();
-        initEventListeners();
-        renderAll();
-        // Service worker registration can be added here if needed
+        renderTasks();
+        registerServiceWorker();
     };
 
     initializeApp();
