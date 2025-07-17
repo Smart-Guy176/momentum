@@ -1,325 +1,319 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Element Selectors ---
-    const taskInput = document.getElementById('task-input');
-    const isDailyHabitCheckbox = document.getElementById('daily-habit-checkbox');
-    const addTaskBtn = document.getElementById('add-task-btn');
-    const dailyHabitsList = document.getElementById('daily-habits-list');
-    const oneTimeTasksList = document.getElementById('one-time-tasks-list');
-    const completedTasksList = document.getElementById('completed-tasks-list');
+:root {
+    --bg-color: #1a1a1a;
+    --glass-bg: rgba(44, 44, 44, 0.6);
+    --primary-color: #00f2ea;
+    --text-primary: #f0f0f0;
+    --text-secondary: #a0a0a0;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --error-color: #ff453a;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
 
-    // Calendar Elements
-    const calendarGrid = document.getElementById('calendar-grid');
-    const monthDisplay = document.getElementById('month-display');
-    const prevMonthBtn = document.getElementById('prev-month-btn');
-    const nextMonthBtn = document.getElementById('next-month-btn');
-    const selectedDateDisplay = document.getElementById('selected-date-display');
+*, *::before, *::after {
+    box-sizing: border-box;
+}
 
-    // Modal Elements
-    const dayDetailModal = document.getElementById('day-detail-modal');
-    const modalCloseBtn = document.getElementById('modal-close-btn');
-    const modalDateHeader = document.getElementById('modal-date-header');
-    const modalTaskList = document.getElementById('modal-task-list');
+body {
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--bg-color);
+    background-image: radial-gradient(circle at top left, var(--primary-color), transparent 30%), radial-gradient(circle at bottom right, #5b21b6, transparent 40%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    margin: 0;
+    overflow-x: hidden;
+}
 
-    // --- Data Management ---
-    let tasks = JSON.parse(localStorage.getItem('momentumTasks')) || [];
-    let nav = 0; // Calendar month navigation
-    let selectedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+.app-container {
+    display: flex;
+    height: 100vh;
+    padding: 20px;
+    gap: 20px;
+}
 
-    const saveTasks = () => {
-        localStorage.setItem('momentumTasks', JSON.stringify(tasks));
-    };
-    
-    // --- Calendar Functions ---
-    const renderCalendar = () => {
-        const dt = new Date();
-        if (nav !== 0) {
-            dt.setMonth(new Date().getMonth() + nav, 1); // Set to day 1 to avoid month-end issues
-        }
+/* --- Calendar Panel (Left) --- */
+.calendar-panel {
+    flex-basis: 40%;
+    max-width: 450px;
+    padding: 30px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px var(--shadow-color);
+    display: flex;
+    flex-direction: column;
+}
 
-        const year = dt.getFullYear();
-        const month = dt.getMonth();
+.calendar-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin: 0;
+}
 
-        const firstDayOfMonth = new Date(year, month, 1);
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        const dateString = firstDayOfMonth.toLocaleDateString('en-us', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric',
-        });
-        const paddingDays = new Date(year, month, 0).getDay(); // Days from prev month
+.calendar-header p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 4px 0 32px 0;
+}
 
-        monthDisplay.innerText = `${dt.toLocaleDateString('en-us', { month: 'long' })} ${year}`;
-        calendarGrid.innerHTML = '';
+.calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
 
-        const tasksByDate = groupTasksByDate();
+.calendar-controls h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    flex-grow: 1;
+    color: var(--text-primary);
+}
 
-        for (let i = 1; i <= paddingDays + daysInMonth; i++) {
-            const daySquare = document.createElement('div');
-            daySquare.classList.add('calendar-day');
+.calendar-controls button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 2.2rem;
+    cursor: pointer;
+    transition: color 0.3s;
+}
 
-            const dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(i - paddingDays).padStart(2, '0')}`;
+.calendar-controls button:hover {
+    color: var(--primary-color);
+}
 
-            if (i > paddingDays) {
-                daySquare.innerText = i - paddingDays;
+#weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
 
-                if (i - paddingDays === new Date().getDate() && nav === 0) {
-                    daySquare.classList.add('today');
-                }
-                
-                if (tasksByDate[dayString]) {
-                    const taskIndicator = document.createElement('div');
-                    taskIndicator.classList.add('task-indicator');
-                    daySquare.appendChild(taskIndicator);
-                }
+#calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    transition: opacity 0.4s ease;
+}
 
-                if (dayString === selectedDate) {
-                    daySquare.classList.add('selected');
-                }
-
-                daySquare.addEventListener('click', () => {
-                    if (tasksByDate[dayString]) {
-                        openDayModal(dayString);
-                    } else {
-                        selectedDate = dayString;
-                        updateSelectedDateDisplay();
-                        renderCalendar();
-                    }
-                });
-
-            } else {
-                daySquare.classList.add('other-month');
-            }
-
-            calendarGrid.appendChild(daySquare);
-        }
-    };
-
-    const groupTasksByDate = () => {
-        return tasks.reduce((acc, task) => {
-            const date = task.dueDate.split('T')[0];
-            if (!acc[date]) {
-                acc[date] = [];
-            }
-            acc[date].push(task);
-            return acc;
-        }, {});
-    };
-
-    const updateSelectedDateDisplay = () => {
-        if (selectedDate) {
-            const date = new Date(selectedDate + 'T00:00:00'); // Ensure correct timezone interpretation
-            const today = new Date();
-            today.setHours(0,0,0,0);
-
-            if (date.getTime() === today.getTime()) {
-                selectedDateDisplay.innerText = "Deadline: Today";
-            } else {
-                selectedDateDisplay.innerText = `Deadline: ${date.toLocaleDateString('en-us', { month: 'long', day: 'numeric' })}`;
-            }
-        } else {
-            selectedDateDisplay.innerText = '';
-        }
-    };
-
-    // --- Modal Functions ---
-    const openDayModal = (dateString) => {
-        const tasksForDay = groupTasksByDate()[dateString] || [];
-        modalTaskList.innerHTML = ''; // Clear previous tasks
-
-        tasksForDay.forEach(task => {
-            modalTaskList.appendChild(createTaskListItem(task));
-        });
-
-        const modalDate = new Date(dateString + 'T00:00:00');
-        modalDateHeader.innerText = modalDate.toLocaleDateString('en-us', { weekday: 'long', month: 'long', day: 'numeric' });
-        
-        dayDetailModal.classList.remove('hidden');
-    };
-
-    const closeDayModal = () => {
-        dayDetailModal.classList.add('hidden');
-    };
-
-    // --- Core Task Functions ---
-    const addTask = () => {
-        const taskName = taskInput.value.trim();
-        if (taskName === '') return;
-
-        const newTask = {
-            id: self.crypto.randomUUID(),
-            name: taskName,
-            isDailyHabit: isDailyHabitCheckbox.checked,
-            isCompleted: false,
-            dueDate: new Date(selectedDate + 'T00:00:00').toISOString(), // Use selected date
-            completedAt: null
-        };
-
-        tasks.push(newTask);
-        saveTasks();
-        renderEverything();
-
-        taskInput.value = '';
-        isDailyHabitCheckbox.checked = false;
-        taskInput.focus();
-    };
-
-    const deleteTask = (taskId) => {
-        tasks = tasks.filter(task => task.id !== taskId);
-        saveTasks();
-        renderEverything();
-        // If modal is open, refresh it
-        if (!dayDetailModal.classList.contains('hidden')) {
-            const date = modalDateHeader.innerText; // This is a bit fragile, better to store date
-            // For simplicity, we just close it. A better implementation would refresh it.
-            closeDayModal();
-        }
-    };
-
-    const toggleTaskComplete = (taskId) => {
-        const task = tasks.find(t => t.id === taskId);
-        if (task) {
-            task.isCompleted = !task.isCompleted;
-            task.completedAt = task.isCompleted ? new Date().toISOString() : null;
-            saveTasks();
-            renderEverything();
-             // If modal is open, refresh it
-             if (!dayDetailModal.classList.contains('hidden')) {
-                const dateKey = new Date(task.dueDate).toISOString().split('T')[0];
-                openDayModal(dateKey);
-            }
-        }
-    };
-
-    const createTaskListItem = (task) => {
-        const li = document.createElement('li');
-        li.className = `task-item ${task.isCompleted ? 'completed' : ''}`;
-        li.dataset.taskId = task.id;
-
-        const checkbox = document.createElement('div');
-        checkbox.className = 'checkbox';
-        checkbox.addEventListener('click', () => toggleTaskComplete(task.id));
-
-        const taskName = document.createElement('span');
-        taskName.className = 'task-name';
-        taskName.textContent = task.name;
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-btn';
-        deleteBtn.innerHTML = '×';
-        deleteBtn.setAttribute('aria-label', 'Delete task');
-        deleteBtn.addEventListener('click', () => deleteTask(task.id));
-
-        li.appendChild(checkbox);
-        li.appendChild(taskName);
-        li.appendChild(deleteBtn);
-        return li;
-    };
+.calendar-day {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    aspect-ratio: 1 / 1;
+    font-size: 1rem;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    border: 2px solid transparent;
+}
+.calendar-day.other-month {
+    color: #555;
+    cursor: default;
+}
+.calendar-day:not(.other-month):hover {
+    background-color: var(--border-color);
+}
+.calendar-day.today {
+    border-color: var(--primary-color);
+}
+.calendar-day.selected {
+    background-color: var(--primary-color);
+    color: #000;
+    font-weight: 700;
+}
+.calendar-day.has-tasks::after {
+    content: '';
+    position: absolute;
+    bottom: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+}
+.calendar-day.selected.has-tasks::after {
+    background-color: #000;
+}
 
 
-    const renderTaskLists = () => {
-        // Clear all lists before rendering
-        dailyHabitsList.innerHTML = '';
-        oneTimeTasksList.innerHTML = '';
-        completedTasksList.innerHTML = '';
+/* --- Tasks Panel (Right) --- */
+.tasks-panel {
+    flex-grow: 1;
+    overflow-y: auto;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px var(--shadow-color);
+}
+.tasks-panel-inner {
+    padding: 30px 40px;
+}
 
-        // Sort tasks: uncompleted first, then by due date
-        tasks.sort((a, b) => a.isCompleted - b.isCompleted || new Date(a.dueDate) - new Date(b.dueDate));
+/* Custom scrollbar */
+.tasks-panel::-webkit-scrollbar { width: 6px; }
+.tasks-panel::-webkit-scrollbar-track { background: transparent; }
+.tasks-panel::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+.tasks-panel::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
-        tasks.forEach(task => {
-            const taskItem = createTaskListItem(task);
-
-            // Append to the correct list
-            if (task.isCompleted) {
-                completedTasksList.prepend(taskItem); // Show most recently completed first
-            } else if (task.isDailyHabit) {
-                dailyHabitsList.appendChild(taskItem);
-            } else {
-                oneTimeTasksList.appendChild(taskItem);
-            }
-        });
-    };
-
-    const stackDailyHabits = () => {
-        const todayStr = new Date().toDateString();
-        const lastStackedDate = localStorage.getItem('momentumLastStacked');
-
-        if (lastStackedDate !== todayStr) {
-            const uniqueHabitNames = [...new Set(tasks.filter(t => t.isDailyHabit).map(t => t.name))];
-
-            uniqueHabitNames.forEach(habitName => {
-                const hasTaskForToday = tasks.some(t =>
-                    t.name === habitName && t.isDailyHabit && new Date(t.dueDate).toDateString() === todayStr
-                );
-
-                if (!hasTaskForToday) {
-                    tasks.push({
-                        id: self.crypto.randomUUID(),
-                        name: habitName,
-                        isDailyHabit: true,
-                        isCompleted: false,
-                        dueDate: new Date().toISOString(),
-                        completedAt: null
-                    });
-                }
-            });
-
-            localStorage.setItem('momentumLastStacked', todayStr);
-            saveTasks();
-        }
-    };
-
-    const renderEverything = () => {
-        renderCalendar();
-        renderTaskLists();
-        updateSelectedDateDisplay();
-    };
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.task-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+#clear-selection-btn {
+    background: var(--border-color);
+    border: none;
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+#clear-selection-btn:hover { background-color: var(--primary-color); color: #000; }
+#clear-selection-btn.hidden { display: none; }
 
 
-    // --- Event Listeners ---
-    addTaskBtn.addEventListener('click', addTask);
-    taskInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            addTask();
-        }
-    });
+.add-task-form {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+#task-input {
+    flex-grow: 1;
+    padding: 14px;
+    font-size: 1.1rem;
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+#task-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 242, 234, 0.2);
+}
+#add-task-btn {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    background-color: var(--primary-color);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 2rem;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+#add-task-btn:hover { transform: scale(1.1) rotate(90deg); }
 
-    prevMonthBtn.addEventListener('click', () => {
-        nav--;
-        renderCalendar();
-    });
+.daily-habit-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-bottom: 32px;
+}
 
-    nextMonthBtn.addEventListener('click', () => {
-        nav++;
-        renderCalendar();
-    });
+/* --- Task Lists --- */
+.task-section-title {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+    margin: 24px 0 12px 0;
+}
 
-    modalCloseBtn.addEventListener('click', closeDayModal);
-    dayDetailModal.addEventListener('click', (e) => {
-        if (e.target === dayDetailModal) {
-            closeDayModal();
-        }
-    });
+.task-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
 
-    // --- PWA & Notification Logic ---
-    const registerServiceWorker = async () => {
-        if ('serviceWorker' in navigator) {
-            try {
-                await navigator.serviceWorker.register('sw.js');
-                console.log('Service Worker registered successfully.');
-            } catch (error) {
-                console.error('Service Worker registration failed:', error);
-            }
-        }
-    };
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 8px;
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    opacity: 1;
+    transform: translateX(0);
+}
+.task-item:last-child { border-bottom: none; }
+.task-item.completed { opacity: 0.4; }
+.task-item.completed .task-name { text-decoration: line-through; }
 
-    // --- Initial Load ---
-    const initializeApp = () => {
-        stackDailyHabits();
-        renderEverything();
-        registerServiceWorker();
-    };
+.checkbox {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.3s;
+}
+.task-item.completed .checkbox {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.task-name {
+    flex-grow: 1;
+    font-size: 1.1rem;
+    word-break: break-word;
+}
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.8rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+}
+.task-item:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { color: var(--error-color); }
 
-    initializeApp();
-});
+
+/* --- Responsive Design --- */
+@media (max-width: 1024px) {
+    body { height: auto; }
+    .app-container { flex-direction: column; height: auto; }
+    .calendar-panel { max-width: 100%; }
+    .tasks-panel { overflow-y: visible; }
+    .tasks-panel-inner { padding: 25px; }
+}
+@media (max-width: 600px) {
+    .app-container { padding: 8px; gap: 8px; }
+    .calendar-panel, .tasks-panel-inner { padding: 16px; }
+    .calendar-header h1 { font-size: 2rem; }
+    .task-header h2 { font-size: 1.5rem; }
+    #add-task-btn { width: 44px; height: 44px; font-size: 1.5rem; }
+    #task-input { padding: 12px; font-size: 1rem; }
+    .delete-btn { opacity: 1; }
+}
